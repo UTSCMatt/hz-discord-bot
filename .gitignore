@@ -454,3 +454,4 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 /hz-discord-bot/hz-discord-bot/appsettings.Development.json
 localPush.ps1
+hzdiscordbot.tar
