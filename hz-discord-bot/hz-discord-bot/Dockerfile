@@ -20,7 +20,4 @@ COPY --from=publish /app/publish .
 
 STOPSIGNAL SIGINT
 
-RUN adduser --disabled-login nonroot
-USER nonroot
-
 ENTRYPOINT ["dotnet", "hz-discord-bot.dll"]
