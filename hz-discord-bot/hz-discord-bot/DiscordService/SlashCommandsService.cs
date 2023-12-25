@@ -1,22 +1,26 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using hz_discord_bot.DiscordService.Singleton;
+using hz_discord_bot.DiscordService.SlashCommand;
 
 namespace hz_discord_bot.DiscordService
 {
     internal class SlashCommandsService : ISlashCommandsService
     {
-        private const string FIRST_TEST_COMMAND = "first-test-command";
-
         private readonly ILogger _logger;
         private readonly IClientGetter _client;
         private readonly List<ulong> _guild_ids;
+        private readonly IEnumerable<ISlashCommand> _commands;
+        private readonly Dictionary<string, Func<SocketSlashCommand, Task>> commandHandlers;
 
-        public SlashCommandsService(ILogger<SlashCommandsService> logger, IClientGetter client, IConfiguration configuration)
+        public SlashCommandsService(ILogger<SlashCommandsService> logger, IClientGetter client, IConfiguration configuration, IEnumerable<ISlashCommand> commands)
         {
             _logger = logger;
             _client = client;
             _guild_ids = configuration.GetSection("guildIds").Get<List<ulong>>() ?? new List<ulong>();
+            _commands = commands;
+
+            commandHandlers = new Dictionary<string, Func<SocketSlashCommand, Task>>();
 
             if (!_guild_ids.Any())
             {
@@ -27,43 +31,48 @@ namespace hz_discord_bot.DiscordService
         public async Task AddSlashCommands()
         {
             var client = _client.GetClient();
-            await AddTestCommand(client);
+            await AddCommands(client);
             client.SlashCommandExecuted += SlashCommandHandler;
         }
 
-        private async Task AddTestCommand(DiscordSocketClient client)
+        private async Task AddCommands(DiscordSocketClient client)
         {
-            foreach (var guildId in _guild_ids)
-            { 
-                try
+            foreach (var command in _commands)
+            {
+                if (commandHandlers.ContainsKey(command.GetName()))
                 {
-                    var guild = client.GetGuild(guildId);
-
-                    var command = new SlashCommandBuilder();
-                    command.WithName(FIRST_TEST_COMMAND);
-                    command.WithDescription("This is my first test slash command");
-
-                    await guild.CreateApplicationCommandAsync(command.Build());
-                    _logger.LogInformation("Creating Test Command with name {CommandName} for Guild: {GuildId}", FIRST_TEST_COMMAND, guildId);
+                    _logger.LogWarning("Command with {CommandName} already exists, skipping.", command.GetName());
                 }
-                catch (Exception exception)
+                else
                 {
-                    _logger.LogError(exception, "Failed to Add Test Command for Guild: {GuildId}", guildId);
+                    commandHandlers.Add(command.GetName(), command.HandleCommand);
+                    foreach (var guildId in _guild_ids)
+                    {
+                        try
+                        {
+                            var guild = client.GetGuild(guildId);
+
+                            await command.AddCommand(guild);
+                        }
+                        catch (Exception exception)
+                        {
+                            _logger.LogError(exception, "Failed to Add Command: {CommandName} for Guild: {GuildId}", command.GetName(), guildId);
+                        }
+                    }
                 }
             }
         }
 
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
-            _logger.LogInformation("Handlingg Slash Command {CommandName}", command.CommandName);
-            switch (command.CommandName)
+            _logger.LogInformation("Handling Slash Command {CommandName}", command.CommandName);
+            if (commandHandlers.TryGetValue(command.CommandName, out var handler))
             {
-                case FIRST_TEST_COMMAND:
-                    await command.RespondAsync($"Hello World");
-                    break;
-                default:
-                    _logger.LogWarning("Unknown command name {CommandName}", command.CommandName);
-                    break;
+                await handler(command);
+            }
+            else
+            {
+                _logger.LogWarning("Unknown command name {CommandName}", command.CommandName);
             }
         }
     }
