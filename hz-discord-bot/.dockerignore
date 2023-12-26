@@ -22,5 +22,7 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 **/appsettings.Development.json
+dectalk.dll
+dtalk_us.dic
 LICENSE
 README.md
