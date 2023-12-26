@@ -12,9 +12,12 @@ IHost host = Host.CreateDefaultBuilder(args)
 
         services.AddSingleton<IClientGetter, ClientGetter>();
         services.AddSingleton<IDectalkService, DectalkService>();
+        services.AddSingleton<IAudioHandler, AudioHandler>();
         services.AddScoped<IClientService, ClientService>();
         services.AddScoped<ISlashCommandsService, SlashCommandsService>();
         services.AddScoped<ISlashCommand, TestCommand>();
+        services.AddScoped<ISlashCommand, TtsCommand>();
+        services.AddScoped<ISlashCommand, DisconnectCommand>();
     })
     .UseSerilog((host, config) =>
     {
