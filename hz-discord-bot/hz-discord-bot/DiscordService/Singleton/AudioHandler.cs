@@ -1,11 +1,10 @@
 ﻿using Discord.Audio;
 using Discord.WebSocket;
-using hz_discord_bot.DiscordService.Singleton;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System;
 
-namespace hz_discord_bot.DiscordService.SlashCommand
+namespace hz_discord_bot.DiscordService.Singleton
 {
     internal class AudioHandler : IAudioHandler
     {
@@ -173,8 +172,8 @@ namespace hz_discord_bot.DiscordService.SlashCommand
                 {
                     _logger.LogError(ex, "Exception encountered during audio sender");
                 }
-                finally 
-                { 
+                finally
+                {
                     await discord.FlushAsync();
                     _logger.LogInformation("Succesfully discord.FlushAsync()");
                     File.Delete(path);
